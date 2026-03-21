@@ -8,6 +8,7 @@ const SLIDES = [
   "zlyuka",
   "friend",
   "steps",
+  "victory",
   "rules",
 ] as const;
 type SlideId = (typeof SLIDES)[number];
@@ -77,6 +78,7 @@ export default function Index() {
           {slide === "zlyuka"   && <SlideZlyuka />}
           {slide === "friend"   && <SlideFriend />}
           {slide === "steps"    && <SlideSteps breathPhase={breathPhase} onBreath={startBreath} />}
+          {slide === "victory"  && <SlideVictory />}
           {slide === "rules"    && <SlideRules />}
         </div>
       </main>
@@ -399,7 +401,125 @@ function SlideSteps({ breathPhase, onBreath }: SlideStepsProps) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// SLIDE 6 — Правила и финал
+// SLIDE 6 — Победа Спокойного Друга
+// ═══════════════════════════════════════════════════════════
+function SlideVictory() {
+  const [phase, setPhase] = useState<"battle" | "win" | "gone">("battle");
+
+  useEffect(() => {
+    const t1 = setTimeout(() => setPhase("win"),  1800);
+    const t2 = setTimeout(() => setPhase("gone"), 3800);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, []);
+
+  return (
+    <div className="flex flex-col items-center text-center gap-6 py-6">
+      <h2
+        className="font-nunito text-3xl font-black text-[#3D2B1F] animate-slide-up"
+        style={{ animationDelay: "0.1s", opacity: 0 }}
+      >
+        {phase === "battle" && <>Битва внутри нас…</>}
+        {phase === "win"    && <>Спокойный Друг <span className="text-[#43A047]">побеждает!</span></>}
+        {phase === "gone"   && <>Злюка ушла, а <span className="text-[#FF8A65]">дружба осталась!</span></>}
+      </h2>
+
+      {/* Arena */}
+      <div className="relative w-full flex items-center justify-center" style={{ height: 200 }}>
+
+        {/* Злюка */}
+        <div
+          className="absolute flex flex-col items-center gap-1 transition-all duration-1000 ease-in-out"
+          style={{
+            left: phase === "battle" ? "10%" : phase === "win" ? "5%" : "-20%",
+            opacity: phase === "gone" ? 0 : 1,
+            transform: phase === "win" ? "scale(0.7) rotate(-15deg)" : phase === "gone" ? "scale(0.3) rotate(-30deg)" : "scale(1)",
+            transitionDuration: phase === "gone" ? "900ms" : "700ms",
+          }}
+        >
+          <span className="text-6xl" style={{ filter: phase === "win" ? "grayscale(0.6)" : "none" }}>😈</span>
+          <span className="font-caveat text-base font-semibold text-[#C62828]">Злюка</span>
+          {phase === "battle" && (
+            <span className="font-caveat text-xs text-[#E53935] animate-pulse-soft">«Кричи! Толкай!»</span>
+          )}
+          {phase === "win" && (
+            <span className="font-caveat text-xs text-[#999]">«Нет…»</span>
+          )}
+        </div>
+
+        {/* VS / результат */}
+        <div className="absolute flex flex-col items-center gap-1 transition-all duration-500" style={{ left: "50%", transform: "translateX(-50%)" }}>
+          {phase === "battle" && (
+            <span className="font-nunito font-black text-3xl text-[#C4956A] animate-pulse-soft">⚡ VS ⚡</span>
+          )}
+          {phase === "win" && (
+            <div className="flex flex-col items-center animate-bounce-in">
+              <span className="text-4xl">🏆</span>
+              <span className="font-caveat text-lg font-bold text-[#F9A825]">Победа!</span>
+            </div>
+          )}
+          {phase === "gone" && (
+            <div className="flex flex-col items-center animate-bounce-in">
+              <span className="text-5xl">🤝</span>
+              <span className="font-caveat text-lg font-bold text-[#43A047]">Ура!</span>
+            </div>
+          )}
+        </div>
+
+        {/* Спокойный Друг */}
+        <div
+          className="absolute flex flex-col items-center gap-1 transition-all duration-700 ease-in-out"
+          style={{
+            right: phase === "battle" ? "10%" : "8%",
+            transform: phase === "win" ? "scale(1.2)" : phase === "gone" ? "scale(1.15)" : "scale(1)",
+          }}
+        >
+          <span
+            className="text-6xl"
+            style={{
+              filter: phase !== "battle" ? "drop-shadow(0 0 12px #FDD835)" : "none",
+              transition: "filter 0.7s",
+            }}
+          >
+            🌟
+          </span>
+          <span className="font-caveat text-base font-semibold text-[#2E7D32]">Спокойный Друг</span>
+          {phase === "battle" && (
+            <span className="font-caveat text-xs text-[#43A047] animate-pulse-soft">«Подожди…»</span>
+          )}
+          {phase !== "battle" && (
+            <span className="font-caveat text-xs text-[#2E7D32]">«Мы справились!»</span>
+          )}
+        </div>
+      </div>
+
+      {/* Сообщение под ареной */}
+      {phase === "gone" && (
+        <div
+          className="w-full bg-[#E8F5E9] border-2 border-[#A5D6A7] rounded-2xl px-6 py-5 animate-bounce-in flex flex-col gap-2"
+          style={{ animationDelay: "0.1s", opacity: 0 }}
+        >
+          <p className="font-nunito font-extrabold text-[#2E7D32] text-lg">
+            И вот — Злюка ушла, а дружба осталась!
+          </p>
+          <div className="flex flex-col gap-1 mt-1">
+            {["✔ Играли вместе", "✔ Поменялись игрушками", "✔ Нашли другую игру"].map((t, i) => (
+              <span key={i} className="font-nunito text-sm text-[#388E3C]">{t}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {phase === "battle" && (
+        <p className="font-nunito text-sm text-[#A09090] animate-fade-in">
+          Смотри, что будет дальше…
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// SLIDE 7 — Правила и финал
 // ═══════════════════════════════════════════════════════════
 function SlideRules() {
   return (
