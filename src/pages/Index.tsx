@@ -1,677 +1,481 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Icon from "@/components/ui/icon";
 
-const IMAGES = {
-  yard: "https://cdn.poehali.dev/projects/4f6f9e38-e14e-43ae-aedf-94ad64b1dd4b/files/4ba968bc-4cbc-43bb-afe9-8d71f5405078.jpg",
-  conflict: "https://cdn.poehali.dev/projects/4f6f9e38-e14e-43ae-aedf-94ad64b1dd4b/files/8be9c571-04ad-4164-8160-2e76b214878a.jpg",
-  happy: "https://cdn.poehali.dev/projects/4f6f9e38-e14e-43ae-aedf-94ad64b1dd4b/files/5d508e02-90a8-4160-aee7-5bd458afca66.jpg",
-};
+// ─── Slide config ─────────────────────────────────────────
+const SLIDES = [
+  "intro",
+  "conflict",
+  "zlyuka",
+  "friend",
+  "steps",
+  "rules",
+] as const;
+type SlideId = (typeof SLIDES)[number];
 
-type StoryChoice = null | "A" | "B";
-
-const slides = [
-  { id: 1, section: "Вовлечение" },
-  { id: 2, section: "Проблема" },
-  { id: 3, section: "Решение" },
-  { id: 4, section: "Методология" },
-  { id: 5, section: "Мастер-класс" },
-  { id: 6, section: "Мастер-класс" },
-  { id: 7, section: "Мастер-класс" },
-  { id: 8, section: "Итоги" },
-  { id: 9, section: "Правила" },
-];
+// ─── Breathing phase ─────────────────────────────────────
+type BreathPhase = "idle" | "in" | "out";
 
 export default function Index() {
-  const [current, setCurrent] = useState(0);
+  const [slideIdx, setSlideIdx] = useState(0);
   const [animKey, setAnimKey] = useState(0);
-  const [storyChoice, setStoryChoice] = useState<StoryChoice>(null);
-  const [handsA, setHandsA] = useState(0);
-  const [handsB, setHandsB] = useState(0);
+  const [breathPhase, setBreathPhase] = useState<BreathPhase>("idle");
+  const breathTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const total = slides.length;
+  const total = SLIDES.length;
+  const slide = SLIDES[slideIdx];
 
   function goTo(idx: number) {
     if (idx < 0 || idx >= total) return;
-    setCurrent(idx);
+    setSlideIdx(idx);
     setAnimKey((k) => k + 1);
-    if (idx !== 7) setStoryChoice(null);
   }
 
   useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "ArrowRight" || e.key === "ArrowDown") goTo(current + 1);
-      if (e.key === "ArrowLeft" || e.key === "ArrowUp") goTo(current - 1);
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [current]);
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "ArrowRight" || e.key === "ArrowDown" || e.key === " ") goTo(slideIdx + 1);
+      if (e.key === "ArrowLeft" || e.key === "ArrowUp") goTo(slideIdx - 1);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [slideIdx]);
+
+  function startBreath() {
+    setBreathPhase("in");
+    breathTimer.current = setTimeout(() => {
+      setBreathPhase("out");
+      breathTimer.current = setTimeout(() => setBreathPhase("idle"), 4000);
+    }, 4000);
+  }
+
+  useEffect(() => () => {
+    if (breathTimer.current) clearTimeout(breathTimer.current);
+  }, []);
+
+  const progressPct = ((slideIdx + 1) / total) * 100;
 
   return (
-    <div className="min-h-screen bg-background font-golos flex flex-col">
-      {/* Header nav */}
-      <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-8 py-4 bg-background/90 backdrop-blur-sm border-b border-border">
-        <div className="flex items-center gap-3">
-          <span className="text-2xl">🎬</span>
-          <span className="font-cormorant text-lg font-semibold text-foreground/80 tracking-wide">
-            Мульттерапия
-          </span>
+    <div className="min-h-screen bg-[#FFF8F0] font-nunito flex flex-col overflow-hidden select-none">
+
+      {/* ── Top bar ── */}
+      <header className="fixed top-0 left-0 right-0 z-50 px-6 py-3 flex items-center gap-4">
+        <div className="flex-1 h-1.5 bg-[#E8D8C8] rounded-full overflow-hidden">
+          <div
+            className="h-full bg-gradient-to-r from-[#FF8A65] to-[#FFB74D] rounded-full transition-all duration-700 ease-out"
+            style={{ width: `${progressPct}%` }}
+          />
         </div>
-        <div className="flex items-center gap-2">
-          {slides.map((_, i) => (
+        <span className="font-nunito text-xs font-bold text-[#C4956A] whitespace-nowrap">
+          {slideIdx + 1} / {total}
+        </span>
+      </header>
+
+      {/* ── Slide area ── */}
+      <main className="flex-1 pt-12 pb-20 flex items-center justify-center px-4">
+        <div key={animKey} className="w-full max-w-2xl animate-slide-up">
+          {slide === "intro"    && <SlideIntro />}
+          {slide === "conflict" && <SlideConflict />}
+          {slide === "zlyuka"   && <SlideZlyuka />}
+          {slide === "friend"   && <SlideFriend />}
+          {slide === "steps"    && <SlideSteps breathPhase={breathPhase} onBreath={startBreath} />}
+          {slide === "rules"    && <SlideRules />}
+        </div>
+      </main>
+
+      {/* ── Bottom nav ── */}
+      <nav className="fixed bottom-0 left-0 right-0 flex items-center justify-between px-6 py-4">
+        <button
+          onClick={() => goTo(slideIdx - 1)}
+          disabled={slideIdx === 0}
+          className="w-12 h-12 rounded-2xl bg-white shadow-md flex items-center justify-center text-[#C4956A] hover:bg-[#FFF0E0] transition-all disabled:opacity-20 disabled:cursor-not-allowed active:scale-95"
+        >
+          <Icon name="ChevronLeft" size={22} />
+        </button>
+
+        <div className="flex gap-2">
+          {SLIDES.map((_, i) => (
             <button
               key={i}
               onClick={() => goTo(i)}
-              className={`h-2 rounded-full transition-all duration-300 ${
-                i === current
-                  ? "bg-primary w-6"
-                  : "w-2 bg-border hover:bg-muted-foreground/40"
+              className={`rounded-full transition-all duration-300 ${
+                i === slideIdx
+                  ? "w-8 h-3 bg-[#FF8A65]"
+                  : i < slideIdx
+                  ? "w-3 h-3 bg-[#FFB74D]"
+                  : "w-3 h-3 bg-[#E8D8C8]"
               }`}
             />
           ))}
         </div>
-        <span className="font-golos text-sm text-muted-foreground">
-          {current + 1} / {total}
-        </span>
-      </header>
-
-      {/* Slide area */}
-      <main className="flex-1 pt-16 pb-20">
-        <div key={animKey} className="animate-slide-up">
-          {current === 0 && <SlideEngagement />}
-          {current === 1 && <SlideProblem />}
-          {current === 2 && <SlideSolution />}
-          {current === 3 && <SlideMethod />}
-          {current === 4 && <SlideComicOne />}
-          {current === 5 && <SlideComicTwo />}
-          {current === 6 && (
-            <SlideChoice
-              storyChoice={storyChoice}
-              setStoryChoice={setStoryChoice}
-              handsA={handsA}
-              handsB={handsB}
-              setHandsA={setHandsA}
-              setHandsB={setHandsB}
-            />
-          )}
-          {current === 7 && <SlideResults storyChoice={storyChoice} />}
-          {current === 8 && <SlideRules />}
-        </div>
-      </main>
-
-      {/* Bottom navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 flex items-center justify-between px-8 py-4 bg-background/90 backdrop-blur-sm border-t border-border">
-        <button
-          onClick={() => goTo(current - 1)}
-          disabled={current === 0}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-golos text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-        >
-          <Icon name="ArrowLeft" size={16} />
-          Назад
-        </button>
-
-        <span className="font-cormorant italic text-muted-foreground text-base">
-          {slides[current].section}
-        </span>
 
         <button
-          onClick={() => goTo(current + 1)}
-          disabled={current === total - 1}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-golos text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+          onClick={() => goTo(slideIdx + 1)}
+          disabled={slideIdx === total - 1}
+          className="w-12 h-12 rounded-2xl bg-[#FF8A65] shadow-md flex items-center justify-center text-white hover:bg-[#F4794E] transition-all disabled:opacity-20 disabled:cursor-not-allowed active:scale-95"
         >
-          Далее
-          <Icon name="ArrowRight" size={16} />
+          <Icon name="ChevronRight" size={22} />
         </button>
       </nav>
     </div>
   );
 }
 
-/* ─── Slide 1: Вовлечение ─── */
-function SlideEngagement() {
+// ═══════════════════════════════════════════════════════════
+// SLIDE 1 — Intro
+// ═══════════════════════════════════════════════════════════
+function SlideIntro() {
   return (
-    <div className="min-h-[calc(100vh-8rem)] flex flex-col items-center justify-center px-8 max-w-4xl mx-auto text-center">
-      <div className="mb-8 animate-fade-in" style={{ animationDelay: "0.1s", opacity: 0 }}>
-        <span className="text-6xl">🎨</span>
+    <div className="flex flex-col items-center text-center gap-6 py-8">
+      <div className="animate-bounce-in" style={{ animationDelay: "0.1s", opacity: 0 }}>
+        <div className="text-8xl animate-float">🤜🤛</div>
       </div>
+
       <h1
-        className="font-cormorant text-5xl md:text-6xl font-light text-foreground mb-4 leading-tight animate-slide-up"
+        className="font-nunito text-4xl md:text-5xl font-black text-[#3D2B1F] leading-tight animate-slide-up"
         style={{ animationDelay: "0.2s", opacity: 0 }}
       >
-        Начнём с вопросов
+        Что такое<br />
+        <span className="text-[#FF8A65]">конфликт?</span>
       </h1>
+
       <p
-        className="font-golos text-muted-foreground text-lg mb-16 animate-fade-in"
+        className="font-nunito text-lg text-[#7A5C4E] max-w-md leading-relaxed animate-fade-in"
         style={{ animationDelay: "0.35s", opacity: 0 }}
       >
-        Поднимите руку, если…
+        Когда вы с друзьями спорите, ссоритесь и ругаетесь — это и есть конфликт.
       </p>
 
-      <div className="w-full grid md:grid-cols-2 gap-6">
-        {[
-          { emoji: "📺", text: "Кто в детстве любил мультфильмы?" },
-          { emoji: "✏️", text: "Кто хотел бы создать свой мультфильм?" },
-        ].map((item, i) => (
-          <div
-            key={i}
-            className="bg-card border border-border rounded-2xl p-8 flex flex-col items-center gap-4 shadow-sm animate-slide-up"
-            style={{ animationDelay: `${0.4 + i * 0.15}s`, opacity: 0 }}
-          >
-            <span className="text-5xl">{item.emoji}</span>
-            <p className="font-cormorant text-2xl font-medium text-foreground leading-snug">
-              {item.text}
-            </p>
-          </div>
-        ))}
+      <div className="w-full flex flex-col gap-3 mt-2 animate-fade-in" style={{ animationDelay: "0.5s", opacity: 0 }}>
+        <Bubble color="#FFE0B2" align="left" speaker="👦">
+          «Я хочу играть в мяч!»
+        </Bubble>
+        <Bubble color="#FFCDD2" align="right" speaker="👧">
+          «А я не хочу! Я хочу рисовать!»
+        </Bubble>
+        <Bubble color="#FFE0B2" align="left" speaker="👦">
+          «Отдай, это моя игрушка!»
+        </Bubble>
+        <Bubble color="#FFCDD2" align="right" speaker="👧">
+          «Нет, я тоже хочу поиграть!»
+        </Bubble>
       </div>
     </div>
   );
 }
 
-/* ─── Slide 2: Проблема ─── */
-function SlideProblem() {
-  const points = [
-    { icon: "VolumeX", text: "«Мне обидно / я злюсь / мне одиноко» — часто не звучит" },
-    { icon: "Minus", text: "Вместо слов: молчание, поведение, вспышки" },
-    { icon: "HelpCircle", text: "Прямые вопросы не помогают: «Что случилось? Почему?»" },
-    { icon: "Lightbulb", text: "Не «не хочет» — а не умеет объяснить" },
-  ];
-
+// ═══════════════════════════════════════════════════════════
+// SLIDE 2 — Злюка
+// ═══════════════════════════════════════════════════════════
+function SlideConflict() {
   return (
-    <div className="min-h-[calc(100vh-8rem)] flex flex-col justify-center px-8 max-w-4xl mx-auto">
-      <div className="mb-2 animate-fade-in" style={{ animationDelay: "0.05s", opacity: 0 }}>
-        <span className="font-golos text-sm font-medium text-primary uppercase tracking-widest">
-          Проблема
-        </span>
+    <div className="flex flex-col items-center text-center gap-6 py-6">
+      <div className="animate-bounce-in" style={{ animationDelay: "0.1s", opacity: 0 }}>
+        <div className="text-7xl animate-wiggle">😡</div>
       </div>
+
       <h2
-        className="font-cormorant text-5xl md:text-6xl font-light text-foreground mb-12 leading-tight animate-slide-up"
-        style={{ animationDelay: "0.15s", opacity: 0 }}
+        className="font-nunito text-3xl md:text-4xl font-black text-[#3D2B1F] animate-slide-up"
+        style={{ animationDelay: "0.2s", opacity: 0 }}
       >
-        Ребёнок не говорит
-        <em className="italic text-primary"> словами</em>
+        Внутри нас просыпается
+        <span className="text-[#E53935]"> Злюка!</span>
       </h2>
 
-      <div className="grid gap-4">
-        {points.map((p, i) => (
-          <div
-            key={i}
-            className="flex items-start gap-5 bg-card border border-border rounded-2xl px-7 py-5 animate-slide-up"
-            style={{ animationDelay: `${0.25 + i * 0.1}s`, opacity: 0 }}
-          >
-            <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center flex-shrink-0 mt-0.5">
-              <Icon name={p.icon} size={18} className="text-foreground/70" />
-            </div>
-            <p className="font-golos text-lg text-foreground leading-relaxed">{p.text}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+      <p className="font-nunito text-base text-[#7A5C4E] animate-fade-in" style={{ animationDelay: "0.3s", opacity: 0 }}>
+        Когда не дали игрушку, кто-то толкнул — злость просыпается.
+      </p>
 
-/* ─── Slide 3: Решение ─── */
-function SlideSolution() {
-  return (
-    <div className="min-h-[calc(100vh-8rem)] flex flex-col justify-center px-8 max-w-4xl mx-auto">
-      <div className="mb-2 animate-fade-in" style={{ animationDelay: "0.05s", opacity: 0 }}>
-        <span className="font-golos text-sm font-medium text-primary uppercase tracking-widest">
-          Решение
-        </span>
-      </div>
-      <h2
-        className="font-cormorant text-5xl md:text-6xl font-light text-foreground mb-12 leading-tight animate-slide-up"
-        style={{ animationDelay: "0.15s", opacity: 0 }}
-      >
-        Говорить через
-        <em className="italic text-primary"> героя</em>
-      </h2>
-
-      <div className="grid md:grid-cols-3 gap-6">
+      <div className="w-full grid grid-cols-1 gap-3 mt-2">
         {[
-          {
-            step: "01",
-            title: "Не спрашиваем напрямую",
-            desc: "Предлагаем историю или комикс вместо вопросов «что случилось?»",
-          },
-          {
-            step: "02",
-            title: "Ребёнок говорит про героя",
-            desc: "Не про себя — про персонажа. Это безопаснее и комфортнее",
-          },
-          {
-            step: "03",
-            title: "Облачко чувств",
-            desc: "«Герой злится» — а не «я злюсь». Дистанция снижает тревогу",
-          },
+          { emoji: "😈", text: "«Кричи!»" },
+          { emoji: "😈", text: "«Толкай!»" },
+          { emoji: "😈", text: "«Это твоё! Забери!»" },
         ].map((item, i) => (
           <div
             key={i}
-            className="bg-card border border-border rounded-2xl p-7 flex flex-col gap-3 animate-slide-up"
-            style={{ animationDelay: `${0.3 + i * 0.12}s`, opacity: 0 }}
+            className="flex items-center gap-4 bg-[#FFEBEE] border-2 border-[#EF9A9A] rounded-2xl px-5 py-3 animate-slide-in-right"
+            style={{ animationDelay: `${0.4 + i * 0.1}s`, opacity: 0 }}
           >
-            <span className="font-cormorant text-4xl font-light text-primary/40">{item.step}</span>
-            <h3 className="font-golos text-base font-semibold text-foreground">{item.title}</h3>
-            <p className="font-golos text-sm text-muted-foreground leading-relaxed">{item.desc}</p>
+            <span className="text-2xl">{item.emoji}</span>
+            <span className="font-nunito font-bold text-[#C62828] text-lg">{item.text}</span>
           </div>
         ))}
       </div>
 
-      <div
-        className="mt-8 bg-accent/50 border border-accent rounded-2xl px-7 py-5 animate-slide-up"
-        style={{ animationDelay: "0.6s", opacity: 0 }}
-      >
-        <p className="font-cormorant text-xl text-center text-foreground/80 italic">
-          💬 «Герой злится» — не «я злюсь»
+      <div className="mt-2 bg-white rounded-2xl border-2 border-[#FFB74D] px-6 py-4 animate-fade-in" style={{ animationDelay: "0.8s", opacity: 0 }}>
+        <p className="font-nunito font-extrabold text-[#E65100] text-base">
+          Но правильно ли она говорит? Разве так можно? 🤔
+        </p>
+        <p className="font-nunito text-[#7A5C4E] text-sm mt-1">
+          Кто-то заплачет. Кто-то обидится. Дружба может испортиться.
         </p>
       </div>
     </div>
   );
 }
 
-/* ─── Slide 4: Методология ─── */
-function SlideMethod() {
-  const points = [
-    { emoji: "🎭", title: "Безопасность", desc: "Легче проговорить эмоции через персонажа" },
-    { emoji: "🎮", title: "Контроль", desc: "Ребёнок управляет сюжетом — и ощущает власть над ситуацией" },
-    { emoji: "🗣️", title: "Речь", desc: "Учится формулировать чувства словами" },
-    { emoji: "🌱", title: "Рост", desc: "Проживает эмоции → лучше понимает себя и других" },
+// ═══════════════════════════════════════════════════════════
+// SLIDE 3 — Спокойный Друг
+// ═══════════════════════════════════════════════════════════
+function SlideZlyuka() {
+  return (
+    <div className="flex flex-col items-center text-center gap-6 py-6">
+      <div className="flex items-center gap-8 animate-bounce-in" style={{ animationDelay: "0.1s", opacity: 0 }}>
+        <div className="flex flex-col items-center gap-1">
+          <div className="text-6xl animate-wiggle">😈</div>
+          <span className="font-caveat text-base font-semibold text-[#C62828]">Злюка</span>
+        </div>
+        <div className="text-3xl font-black text-[#C4956A]">VS</div>
+        <div className="flex flex-col items-center gap-1">
+          <div className="text-6xl animate-float">🌟</div>
+          <span className="font-caveat text-base font-semibold text-[#2E7D32]">Спокойный Друг</span>
+        </div>
+      </div>
+
+      <h2
+        className="font-nunito text-3xl font-black text-[#3D2B1F] animate-slide-up"
+        style={{ animationDelay: "0.25s", opacity: 0 }}
+      >
+        Нам нужен
+        <span className="text-[#43A047]"> Спокойный Друг!</span>
+      </h2>
+
+      <p className="font-nunito text-base text-[#7A5C4E] max-w-sm animate-fade-in" style={{ animationDelay: "0.35s", opacity: 0 }}>
+        Он тоже живёт внутри нас. Его только нужно позвать 💛
+      </p>
+
+      <div className="w-full grid grid-cols-1 gap-3 mt-1">
+        {[
+          { emoji: "😊", text: "«Подожди…»" },
+          { emoji: "😊", text: "«Давай подумаем»" },
+          { emoji: "😊", text: "«Можно договориться»" },
+        ].map((item, i) => (
+          <div
+            key={i}
+            className="flex items-center gap-4 bg-[#E8F5E9] border-2 border-[#A5D6A7] rounded-2xl px-5 py-3 animate-slide-up"
+            style={{ animationDelay: `${0.45 + i * 0.1}s`, opacity: 0 }}
+          >
+            <span className="text-2xl">{item.emoji}</span>
+            <span className="font-nunito font-bold text-[#2E7D32] text-lg">{item.text}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// SLIDE 4 — 5 шагов
+// ═══════════════════════════════════════════════════════════
+function SlideFriend() {
+  const steps = [
+    { num: "1", icon: "🖐", title: "Поймай Злюку", desc: "Когда хочется ударить или крикнуть — скажи: «Стоп, Злюка!»", bg: "#FFECB3", border: "#FFD54F" },
+    { num: "2", icon: "🌬️", title: "Успокой тело", desc: "Остановись и глубоко подыши. Скажи: «Я спокоен, я справлюсь»", bg: "#E3F2FD", border: "#90CAF9" },
+    { num: "3", icon: "💛", title: "Позови Друга", desc: "Спроси: «Что я хочу? Что хочет другой?» Скажи о чувствах", bg: "#E8F5E9", border: "#A5D6A7" },
+    { num: "4", icon: "✅", title: "Найдите выход", desc: "Играйте вместе, поменяйтесь или выберите другую игру", bg: "#F3E5F5", border: "#CE93D8" },
+    { num: "5", icon: "🙋", title: "Попроси помощь", desc: "Не получается? Скажи взрослому: «Помогите, пожалуйста»", bg: "#FFF3E0", border: "#FFCC80" },
   ];
 
   return (
-    <div className="min-h-[calc(100vh-8rem)] flex flex-col justify-center px-8 max-w-4xl mx-auto">
-      <div className="mb-2 animate-fade-in" style={{ animationDelay: "0.05s", opacity: 0 }}>
-        <span className="font-golos text-sm font-medium text-primary uppercase tracking-widest">
-          Методология
-        </span>
-      </div>
+    <div className="flex flex-col items-center text-center gap-5 py-6">
+      <div className="text-6xl animate-bounce-in animate-float" style={{ animationDelay: "0.1s", opacity: 0 }}>🤝</div>
       <h2
-        className="font-cormorant text-5xl md:text-6xl font-light text-foreground mb-4 leading-tight animate-slide-up"
-        style={{ animationDelay: "0.15s", opacity: 0 }}
+        className="font-nunito text-3xl font-black text-[#3D2B1F] animate-slide-up"
+        style={{ animationDelay: "0.2s", opacity: 0 }}
       >
-        Почему метод
-        <em className="italic text-primary"> работает</em>
+        5 шагов, чтобы
+        <span className="text-[#FF8A65]"> победить Злюку</span>
       </h2>
-      <p className="font-golos text-muted-foreground mb-10 animate-fade-in" style={{ animationDelay: "0.25s", opacity: 0 }}>
-        Управляет историей → тренирует управление ситуацией
-      </p>
 
-      <div className="grid md:grid-cols-2 gap-5">
-        {points.map((p, i) => (
+      <div className="w-full flex flex-col gap-3 mt-2">
+        {steps.map((s, i) => (
           <div
             key={i}
-            className="flex items-start gap-5 bg-card border border-border rounded-2xl px-7 py-6 animate-slide-up"
+            className="flex items-start gap-4 rounded-2xl border-2 px-5 py-4 text-left animate-slide-up"
+            style={{ backgroundColor: s.bg, borderColor: s.border, animationDelay: `${0.25 + i * 0.1}s`, opacity: 0 }}
+          >
+            <div className="w-8 h-8 rounded-xl bg-white/70 flex items-center justify-center flex-shrink-0 font-nunito font-black text-[#3D2B1F] text-sm">
+              {s.num}
+            </div>
+            <div>
+              <span className="text-lg mr-2">{s.icon}</span>
+              <span className="font-nunito font-extrabold text-[#3D2B1F] text-base">{s.title}</span>
+              <p className="font-nunito text-sm text-[#5D4037] mt-0.5 leading-snug">{s.desc}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// SLIDE 5 — Дыхательное упражнение
+// ═══════════════════════════════════════════════════════════
+interface SlideStepsProps {
+  breathPhase: BreathPhase;
+  onBreath: () => void;
+}
+
+function SlideSteps({ breathPhase, onBreath }: SlideStepsProps) {
+  const isActive = breathPhase !== "idle";
+  const isIn = breathPhase === "in";
+
+  return (
+    <div className="flex flex-col items-center text-center gap-6 py-6">
+      <div className="text-5xl animate-bounce-in" style={{ animationDelay: "0.1s", opacity: 0 }}>🌬️</div>
+      <h2
+        className="font-nunito text-3xl font-black text-[#3D2B1F] animate-slide-up"
+        style={{ animationDelay: "0.2s", opacity: 0 }}
+      >
+        Давайте вместе подышим!
+      </h2>
+      <p className="font-nunito text-base text-[#7A5C4E] animate-fade-in max-w-sm" style={{ animationDelay: "0.3s", opacity: 0 }}>
+        Когда мы злимся — тело очень напряжено. Нажми на круг!
+      </p>
+
+      <div
+        className="flex flex-col items-center gap-4 animate-fade-in"
+        style={{ animationDelay: "0.4s", opacity: 0 }}
+      >
+        <div className="relative flex items-center justify-center" style={{ width: 240, height: 240 }}>
+          {/* Glow ring */}
+          <div
+            className="absolute rounded-full transition-all ease-in-out"
+            style={{
+              width: isIn ? 230 : isActive ? 170 : 0,
+              height: isIn ? 230 : isActive ? 170 : 0,
+              background: "radial-gradient(circle, rgba(129,212,250,0.4), rgba(179,229,252,0.2))",
+              transitionDuration: "4000ms",
+            }}
+          />
+          {/* Circle button */}
+          <button
+            onClick={!isActive ? onBreath : undefined}
+            className="relative rounded-full flex flex-col items-center justify-center font-nunito font-extrabold text-white shadow-xl transition-all ease-in-out"
+            style={{
+              width: isActive ? (isIn ? 200 : 150) : 160,
+              height: isActive ? (isIn ? 200 : 150) : 160,
+              background: isIn
+                ? "linear-gradient(135deg, #42A5F5, #1E88E5)"
+                : isActive
+                ? "linear-gradient(135deg, #66BB6A, #43A047)"
+                : "linear-gradient(135deg, #FF8A65, #FF7043)",
+              transitionDuration: "4000ms",
+              cursor: isActive ? "default" : "pointer",
+            }}
+          >
+            <span className="text-4xl mb-1">
+              {breathPhase === "idle" ? "🫁" : isIn ? "⬆️" : "⬇️"}
+            </span>
+            <span className="text-sm leading-none px-3 text-center">
+              {breathPhase === "idle"
+                ? "Нажми!"
+                : isIn
+                ? "Вдох…"
+                : "Выдох…"}
+            </span>
+          </button>
+        </div>
+
+        {isActive && (
+          <p className="font-caveat text-2xl font-semibold text-[#1565C0] animate-fade-in">
+            Я спокоен, я справлюсь ✨
+          </p>
+        )}
+        {!isActive && (
+          <p className="font-nunito text-sm text-[#A09090]">
+            4 сек вдох → 4 сек выдох
+          </p>
+        )}
+      </div>
+
+      <div className="w-full bg-[#E8F5E9] border-2 border-[#A5D6A7] rounded-2xl px-5 py-4 animate-fade-in" style={{ animationDelay: "0.6s", opacity: 0 }}>
+        <p className="font-nunito text-sm text-[#2E7D32] font-semibold text-left">
+          💬 «Мне обидно» · «Я не хочу ссориться» · «Извини, я не хотел обидеть»
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// SLIDE 6 — Правила и финал
+// ═══════════════════════════════════════════════════════════
+function SlideRules() {
+  return (
+    <div className="flex flex-col items-center text-center gap-5 py-6">
+      <div className="text-6xl animate-bounce-in animate-float" style={{ animationDelay: "0.1s", opacity: 0 }}>🌈</div>
+      <h2
+        className="font-nunito text-3xl font-black text-[#3D2B1F] animate-slide-up"
+        style={{ animationDelay: "0.2s", opacity: 0 }}
+      >
+        Запомните, ребята!
+      </h2>
+
+      <div className="w-full grid grid-cols-1 gap-3 mt-1">
+        {[
+          { emoji: "💛", green: true,  text: "Злиться — можно" },
+          { emoji: "🚫", green: false, text: "Обижать — нельзя" },
+          { emoji: "💬", green: true,  text: "Говорим словами, вежливо" },
+          { emoji: "🤝", green: true,  text: "Договариваемся, спрашиваем, предлагаем" },
+        ].map((r, i) => (
+          <div
+            key={i}
+            className={`flex items-center gap-4 rounded-2xl border-2 px-5 py-3 animate-slide-up ${
+              r.green
+                ? "bg-[#E8F5E9] border-[#A5D6A7]"
+                : "bg-[#FFEBEE] border-[#EF9A9A]"
+            }`}
             style={{ animationDelay: `${0.3 + i * 0.1}s`, opacity: 0 }}
           >
-            <span className="text-3xl flex-shrink-0">{p.emoji}</span>
-            <div>
-              <h3 className="font-golos font-semibold text-foreground mb-1">{p.title}</h3>
-              <p className="font-golos text-sm text-muted-foreground leading-relaxed">{p.desc}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* ─── Slide 5: Комикс кадр 1 ─── */
-function SlideComicOne() {
-  return (
-    <div className="min-h-[calc(100vh-8rem)] flex flex-col justify-center px-8 max-w-4xl mx-auto">
-      <div className="mb-2 animate-fade-in" style={{ animationDelay: "0.05s", opacity: 0 }}>
-        <span className="font-golos text-sm font-medium text-primary uppercase tracking-widest">
-          Мини-мастер-класс · Кадр 1 из 3
-        </span>
-      </div>
-      <h2
-        className="font-cormorant text-4xl md:text-5xl font-light text-foreground mb-8 leading-tight animate-slide-up"
-        style={{ animationDelay: "0.15s", opacity: 0 }}
-      >
-        Ситуация во дворе
-      </h2>
-
-      <div className="grid md:grid-cols-2 gap-8 items-center">
-        <div
-          className="rounded-2xl overflow-hidden border border-border shadow-sm aspect-square animate-fade-in"
-          style={{ animationDelay: "0.25s", opacity: 0 }}
-        >
-          <img src={IMAGES.yard} alt="Маша и Петя во дворе" className="w-full h-full object-cover" />
-        </div>
-
-        <div className="flex flex-col gap-5 animate-slide-in-right" style={{ animationDelay: "0.35s", opacity: 0 }}>
-          <div className="bg-card border border-border rounded-2xl p-6">
-            <p className="font-golos text-base leading-relaxed text-foreground">
-              Лето. Маша играет в мяч, Петя — в машинку.
-            </p>
-          </div>
-          <div className="bg-accent/50 border border-accent rounded-2xl p-5">
-            <p className="font-cormorant italic text-lg text-foreground/80">
-              Они играют рядом, но каждый — по-своему. Пока всё спокойно…
-            </p>
-          </div>
-          <div className="flex items-center gap-3 text-muted-foreground">
-            <Icon name="Users" size={18} />
-            <span className="font-golos text-sm">Персонажи: Маша и Петя</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ─── Slide 6: Комикс кадр 2 ─── */
-function SlideComicTwo() {
-  return (
-    <div className="min-h-[calc(100vh-8rem)] flex flex-col justify-center px-8 max-w-4xl mx-auto">
-      <div className="mb-2 animate-fade-in" style={{ animationDelay: "0.05s", opacity: 0 }}>
-        <span className="font-golos text-sm font-medium text-primary uppercase tracking-widest">
-          Мини-мастер-класс · Кадр 2 из 3
-        </span>
-      </div>
-      <h2
-        className="font-cormorant text-4xl md:text-5xl font-light text-foreground mb-8 leading-tight animate-slide-up"
-        style={{ animationDelay: "0.15s", opacity: 0 }}
-      >
-        Конфликт
-      </h2>
-
-      <div className="grid md:grid-cols-2 gap-8 items-center">
-        <div
-          className="rounded-2xl overflow-hidden border border-border shadow-sm aspect-square animate-fade-in"
-          style={{ animationDelay: "0.25s", opacity: 0 }}
-        >
-          <img src={IMAGES.conflict} alt="Конфликт из-за мяча" className="w-full h-full object-cover" />
-        </div>
-
-        <div className="flex flex-col gap-5 animate-slide-in-right" style={{ animationDelay: "0.35s", opacity: 0 }}>
-          <div className="bg-card border border-border rounded-2xl p-6">
-            <p className="font-golos text-base leading-relaxed text-foreground">
-              Петя тоже захотел мяч — и пытается его отнять. Начинается конфликт.
-            </p>
-          </div>
-          <div className="bg-rose-50 border border-rose-200 rounded-2xl p-5">
-            <p className="font-cormorant italic text-lg text-foreground/80">
-              Что почувствовала Маша? Что почувствовал Петя? Как вы думаете?
-            </p>
-          </div>
-          <div className="flex items-center gap-3 text-muted-foreground">
-            <Icon name="Zap" size={18} />
-            <span className="font-golos text-sm">Момент для обсуждения эмоций</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ─── Slide 7: Выбор сюжета ─── */
-interface SlideChoiceProps {
-  storyChoice: StoryChoice;
-  setStoryChoice: (v: StoryChoice) => void;
-  handsA: number;
-  handsB: number;
-  setHandsA: (v: number) => void;
-  setHandsB: (v: number) => void;
-}
-
-function SlideChoice({ storyChoice, setStoryChoice, handsA, handsB, setHandsA, setHandsB }: SlideChoiceProps) {
-  return (
-    <div className="min-h-[calc(100vh-8rem)] flex flex-col justify-center px-8 max-w-4xl mx-auto">
-      <div className="mb-2 animate-fade-in" style={{ animationDelay: "0.05s", opacity: 0 }}>
-        <span className="font-golos text-sm font-medium text-primary uppercase tracking-widest">
-          Мини-мастер-класс · Развилка
-        </span>
-      </div>
-      <h2
-        className="font-cormorant text-4xl md:text-5xl font-light text-foreground mb-3 leading-tight animate-slide-up"
-        style={{ animationDelay: "0.15s", opacity: 0 }}
-      >
-        Выбери сюжет
-      </h2>
-      <p className="font-golos text-muted-foreground mb-10 animate-fade-in" style={{ animationDelay: "0.25s", opacity: 0 }}>
-        Куда повернёт история? Поднимите руки!
-      </p>
-
-      <div className="grid md:grid-cols-2 gap-6 mb-8">
-        {/* Вариант A */}
-        <button
-          onClick={() => setStoryChoice("A")}
-          className={`group text-left rounded-2xl border-2 p-8 transition-all duration-300 ${
-            storyChoice === "A"
-              ? "border-rose-400 bg-rose-50 shadow-md"
-              : "border-border bg-card hover:border-rose-300 hover:bg-rose-50/50"
-          }`}
-        >
-          <div className="flex items-start gap-4 mb-4">
-            <span className="text-3xl">😤</span>
-            <div>
-              <span className="font-golos text-xs font-semibold text-rose-500 uppercase tracking-widest block mb-1">
-                Вариант А
-              </span>
-              <h3 className="font-cormorant text-xl font-medium text-foreground leading-snug">
-                Маша злится и толкает Петю
-              </h3>
-            </div>
-          </div>
-          <p className="font-golos text-sm text-muted-foreground mb-4">
-            Эмоции берут верх → физический конфликт → ссора
-          </p>
-          <div className="flex items-center justify-between">
-            <span className="font-golos text-xs text-muted-foreground">Рук поднято:</span>
-            <div className="flex items-center gap-3">
-              <span className="font-cormorant text-2xl font-medium text-foreground">{handsA}</span>
-              <div className="flex gap-1">
-                <button
-                  onClick={(e) => { e.stopPropagation(); setHandsA(Math.max(0, handsA - 1)); }}
-                  className="w-7 h-7 rounded-lg bg-border hover:bg-muted-foreground/20 flex items-center justify-center text-xs font-bold transition-colors"
-                >−</button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setHandsA(handsA + 1); }}
-                  className="w-7 h-7 rounded-lg bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold transition-colors hover:bg-primary/90"
-                >+</button>
-              </div>
-            </div>
-          </div>
-        </button>
-
-        {/* Вариант B */}
-        <button
-          onClick={() => setStoryChoice("B")}
-          className={`group text-left rounded-2xl border-2 p-8 transition-all duration-300 ${
-            storyChoice === "B"
-              ? "border-primary bg-primary/5 shadow-md"
-              : "border-border bg-card hover:border-primary/50 hover:bg-primary/5"
-          }`}
-        >
-          <div className="flex items-start gap-4 mb-4">
-            <span className="text-3xl">🤝</span>
-            <div>
-              <span className="font-golos text-xs font-semibold text-primary uppercase tracking-widest block mb-1">
-                Вариант Б
-              </span>
-              <h3 className="font-cormorant text-xl font-medium text-foreground leading-snug">
-                Петя извиняется и спрашивает мяч
-              </h3>
-            </div>
-          </div>
-          <p className="font-golos text-sm text-muted-foreground mb-4">
-            Слова вместо действий → диалог → совместная игра
-          </p>
-          <div className="flex items-center justify-between">
-            <span className="font-golos text-xs text-muted-foreground">Рук поднято:</span>
-            <div className="flex items-center gap-3">
-              <span className="font-cormorant text-2xl font-medium text-foreground">{handsB}</span>
-              <div className="flex gap-1">
-                <button
-                  onClick={(e) => { e.stopPropagation(); setHandsB(Math.max(0, handsB - 1)); }}
-                  className="w-7 h-7 rounded-lg bg-border hover:bg-muted-foreground/20 flex items-center justify-center text-xs font-bold transition-colors"
-                >−</button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setHandsB(handsB + 1); }}
-                  className="w-7 h-7 rounded-lg bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold transition-colors hover:bg-primary/90"
-                >+</button>
-              </div>
-            </div>
-          </div>
-        </button>
-      </div>
-
-      {storyChoice && (
-        <div className="text-center animate-fade-in">
-          <p className="font-golos text-sm text-muted-foreground">
-            Выбран вариант <strong>{storyChoice === "A" ? "А" : "Б"}</strong> — перейдите к следующему слайду для разбора
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ─── Slide 8: Итоги двух веток ─── */
-function SlideResults({ storyChoice }: { storyChoice: StoryChoice }) {
-  return (
-    <div className="min-h-[calc(100vh-8rem)] flex flex-col justify-center px-8 max-w-5xl mx-auto">
-      <div className="mb-2 animate-fade-in" style={{ animationDelay: "0.05s", opacity: 0 }}>
-        <span className="font-golos text-sm font-medium text-primary uppercase tracking-widest">
-          Мини-мастер-класс · Итоги
-        </span>
-      </div>
-      <h2
-        className="font-cormorant text-4xl md:text-5xl font-light text-foreground mb-10 leading-tight animate-slide-up"
-        style={{ animationDelay: "0.15s", opacity: 0 }}
-      >
-        Две ветки — два финала
-      </h2>
-
-      <div className="grid md:grid-cols-2 gap-6 mb-8">
-        {/* Ветка A */}
-        <div
-          className={`rounded-2xl border-2 p-7 animate-slide-up transition-all duration-500 ${
-            storyChoice === "A" ? "border-rose-400 bg-rose-50" : "border-border bg-card"
-          }`}
-          style={{ animationDelay: "0.25s", opacity: 0 }}
-        >
-          <div className="flex items-center gap-3 mb-5">
-            <span className="text-2xl">😤</span>
-            <h3 className="font-golos font-semibold text-foreground">Ветка А — неудачно</h3>
-          </div>
-          <div className="flex flex-col gap-2 mb-5">
-            {["Руки вместо слов → толчок", "Ответный толчок → ссора", "Никому не весело"].map((s, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <div className="w-5 h-5 rounded-full bg-rose-200 flex items-center justify-center flex-shrink-0">
-                  <span className="text-xs text-rose-600 font-bold">{i + 1}</span>
-                </div>
-                <span className="font-golos text-sm text-foreground">{s}</span>
-              </div>
-            ))}
-          </div>
-          <div className="bg-rose-100 rounded-xl p-4">
-            <p className="font-cormorant italic text-base text-foreground/80">
-              «Игра заканчивается. Оба расстроены»
-            </p>
-          </div>
-        </div>
-
-        {/* Ветка B */}
-        <div
-          className={`rounded-2xl border-2 p-7 animate-slide-up transition-all duration-500 ${
-            storyChoice === "B" ? "border-primary bg-primary/5" : "border-border bg-card"
-          }`}
-          style={{ animationDelay: "0.35s", opacity: 0 }}
-        >
-          <div className="flex items-center gap-3 mb-5">
-            <span className="text-2xl">🤝</span>
-            <h3 className="font-golos font-semibold text-foreground">Ветка Б — удачно</h3>
-          </div>
-          <div className="flex flex-col gap-3 mb-5">
-            <div className="bg-muted rounded-xl p-4">
-              <p className="font-golos text-sm">
-                <strong>Петя:</strong> «Извини. Можно я тоже поиграю?»
-              </p>
-            </div>
-            <div className="bg-muted rounded-xl p-4">
-              <p className="font-golos text-sm">
-                <strong>Маша:</strong> «Можно! Давай вместе!»
-              </p>
-            </div>
-          </div>
-          <div className="bg-primary/10 rounded-xl p-4">
-            <p className="font-cormorant italic text-base text-foreground/80">
-              «Игра продолжается вместе»
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div
-        className="bg-accent/60 border border-accent rounded-2xl px-7 py-5 animate-slide-up"
-        style={{ animationDelay: "0.5s", opacity: 0 }}
-      >
-        <div className="flex items-start gap-4">
-          <Icon name="MessageCircleQuestion" size={22} className="text-primary flex-shrink-0 mt-0.5" />
-          <p className="font-golos text-base text-foreground">
-            <strong>Вопрос педагогам:</strong> Что должен был сделать Петя, чтобы не поссориться?
-            <span className="text-muted-foreground ml-2">→ спросить / договориться</span>
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ─── Slide 9: Правила + Закрытие ─── */
-function SlideRules() {
-  const rules = [
-    { emoji: "🙏", text: "Сначала вежливо спроси" },
-    { emoji: "👫", text: "Можно играть вместе" },
-    { emoji: "🚫", text: "Драться и ругаться — не выход" },
-  ];
-
-  return (
-    <div className="min-h-[calc(100vh-8rem)] flex flex-col justify-center px-8 max-w-4xl mx-auto">
-      <div className="mb-2 animate-fade-in" style={{ animationDelay: "0.05s", opacity: 0 }}>
-        <span className="font-golos text-sm font-medium text-primary uppercase tracking-widest">
-          Правила
-        </span>
-      </div>
-      <h2
-        className="font-cormorant text-4xl md:text-5xl font-light text-foreground mb-3 leading-tight animate-slide-up"
-        style={{ animationDelay: "0.15s", opacity: 0 }}
-      >
-        Что закрепляем
-        <em className="italic text-primary"> у ребёнка</em>
-      </h2>
-      <p className="font-golos text-muted-foreground mb-10 animate-fade-in" style={{ animationDelay: "0.25s", opacity: 0 }}>
-        Три простых правила, которые ребёнок усваивает через историю
-      </p>
-
-      <div className="grid md:grid-cols-3 gap-5 mb-8">
-        {rules.map((r, i) => (
-          <div
-            key={i}
-            className="bg-card border border-border rounded-2xl p-7 text-center animate-slide-up"
-            style={{ animationDelay: `${0.3 + i * 0.12}s`, opacity: 0 }}
-          >
-            <span className="text-5xl block mb-4">{r.emoji}</span>
-            <p className="font-golos text-base font-medium text-foreground">{r.text}</p>
+            <span className="text-2xl">{r.emoji}</span>
+            <span className={`font-nunito font-bold text-lg ${r.green ? "text-[#2E7D32]" : "text-[#C62828]"}`}>
+              {r.text}
+            </span>
           </div>
         ))}
       </div>
 
       <div
-        className="bg-secondary border border-border rounded-2xl px-8 py-7 animate-slide-up"
-        style={{ animationDelay: "0.6s", opacity: 0 }}
+        className="w-full mt-2 rounded-3xl px-6 py-6 animate-bounce-in"
+        style={{
+          background: "linear-gradient(135deg, #FFF8E1 0%, #FFE0B2 100%)",
+          border: "3px solid #FFB74D",
+          animationDelay: "0.75s",
+          opacity: 0,
+        }}
       >
-        <p className="font-cormorant text-xl text-foreground leading-relaxed text-center mb-5">
-          Мульттерапия — это безопасный способ прожить ситуацию. Если ребёнок меняет сюжет в комиксе — со временем сможет менять его и в жизни.
+        <p className="font-caveat text-2xl font-bold text-[#E65100] leading-relaxed">
+          Вы сильнее своей злости,<br />
+          а друзья важнее, чем ссора и обида! 💪
         </p>
-        <div className="flex items-center justify-center gap-3">
-          <span className="text-2xl">🎬</span>
-          <p className="font-golos text-lg font-semibold text-foreground">
-            Спасибо за внимание!
-          </p>
-          <span className="text-2xl">✨</span>
+        <div className="mt-3 flex justify-center gap-2 text-2xl animate-pulse-soft">
+          <span>🌟</span><span>💛</span><span>🌟</span>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// Helper — Speech bubble
+// ═══════════════════════════════════════════════════════════
+interface BubbleProps {
+  color: string;
+  align: "left" | "right";
+  speaker: string;
+  children: React.ReactNode;
+}
+
+function Bubble({ color, align, speaker, children }: BubbleProps) {
+  return (
+    <div className={`flex items-end gap-2 ${align === "right" ? "flex-row-reverse" : ""}`}>
+      <span className="text-2xl flex-shrink-0">{speaker}</span>
+      <div
+        className="rounded-2xl px-4 py-3 font-nunito font-semibold text-[#3D2B1F] text-sm max-w-xs text-left shadow-sm"
+        style={{ backgroundColor: color }}
+      >
+        {children}
       </div>
     </div>
   );
