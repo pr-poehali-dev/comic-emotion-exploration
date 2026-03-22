@@ -10,6 +10,7 @@ const SLIDES = [
   "steps",
   "victory",
   "rules",
+  "final",
 ] as const;
 type SlideId = (typeof SLIDES)[number];
 
@@ -80,6 +81,7 @@ export default function Index() {
           {slide === "steps"    && <SlideSteps breathPhase={breathPhase} onBreath={startBreath} />}
           {slide === "victory"  && <SlideVictory />}
           {slide === "rules"    && <SlideRules />}
+          {slide === "final"    && <SlideFinal />}
         </div>
       </main>
 
@@ -647,6 +649,92 @@ function Bubble({ color, align, speaker, children }: BubbleProps) {
       >
         {children}
       </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// SLIDE 8 — Финальная мысль
+// ═══════════════════════════════════════════════════════════
+const FINAL_LINES = [
+  { text: "Мульттерапия — не про комиксы.", delay: 400 },
+  { text: "Это безопасный способ прожить сложную ситуацию.", delay: 1600 },
+  { text: "Если ребёнок смог изменить сюжет в комиксе —", delay: 3000 },
+  { text: "однажды сможет изменить его и в жизни.", delay: 4200, accent: true },
+];
+
+function SlideFinal() {
+  const [shown, setShown] = useState<number[]>([]);
+
+  useEffect(() => {
+    FINAL_LINES.forEach((line, i) => {
+      setTimeout(() => setShown((s) => [...s, i]), line.delay);
+    });
+  }, []);
+
+  return (
+    <div
+      className="relative flex flex-col items-center justify-center overflow-hidden rounded-3xl px-8 py-12"
+      style={{
+        minHeight: 460,
+        background: "linear-gradient(160deg, #1A0533 0%, #2E1060 50%, #0D1B4B 100%)",
+      }}
+    >
+      {/* Тихие звёзды */}
+      <Stars />
+
+      {/* Книга / плёнка */}
+      <div
+        className="relative z-10 text-6xl mb-8"
+        style={{
+          opacity: shown.includes(0) ? 1 : 0,
+          transform: shown.includes(0) ? "scale(1)" : "scale(0.5)",
+          transition: "opacity 0.8s ease, transform 0.8s ease",
+        }}
+      >
+        🎬
+      </div>
+
+      {/* Строки текста */}
+      <div className="relative z-10 flex flex-col gap-4 w-full max-w-sm">
+        {FINAL_LINES.map((line, i) => (
+          <p
+            key={i}
+            className={`font-nunito leading-snug text-center ${
+              line.accent
+                ? "font-black text-[#FFD54F] text-xl"
+                : "font-semibold text-white/90 text-base"
+            }`}
+            style={{
+              opacity: shown.includes(i) ? 1 : 0,
+              transform: shown.includes(i) ? "translateY(0)" : "translateY(18px)",
+              transition: "opacity 0.8s ease, transform 0.8s ease",
+            }}
+          >
+            {line.text}
+          </p>
+        ))}
+      </div>
+
+      {/* Декоративная линия под акцентом */}
+      <div
+        className="relative z-10 mt-6 w-16 h-0.5 rounded-full bg-[#FFD54F]"
+        style={{
+          opacity: shown.includes(3) ? 0.7 : 0,
+          transition: "opacity 1.2s ease 0.4s",
+        }}
+      />
+
+      {/* Подпись */}
+      <p
+        className="relative z-10 mt-5 font-caveat text-[#B39DDB] text-lg"
+        style={{
+          opacity: shown.includes(3) ? 1 : 0,
+          transition: "opacity 1s ease 0.8s",
+        }}
+      >
+        — мульттерапия
+      </p>
     </div>
   );
 }
