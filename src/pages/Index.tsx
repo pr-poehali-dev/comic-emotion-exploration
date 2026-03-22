@@ -519,60 +519,110 @@ function SlideVictory() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// SLIDE 7 — Правила и финал
+// SLIDE 7 — Финальные титры «Правила Дружбы»
 // ═══════════════════════════════════════════════════════════
-function SlideRules() {
-  return (
-    <div className="flex flex-col items-center text-center gap-5 py-6">
-      <div className="text-6xl animate-bounce-in animate-float" style={{ animationDelay: "0.1s", opacity: 0 }}>🌈</div>
-      <h2
-        className="font-nunito text-3xl font-black text-[#3D2B1F] animate-slide-up"
-        style={{ animationDelay: "0.2s", opacity: 0 }}
-      >
-        Запомните, ребята!
-      </h2>
+const RULES = [
+  { emoji: "🙋", text: "Сначала вежливо спроси!" },
+  { emoji: "🤝", text: "Всегда можно поиграть вместе!" },
+  { emoji: "🚫", text: "Драться и ругаться не весело!" },
+];
 
-      <div className="w-full grid grid-cols-1 gap-3 mt-1">
-        {[
-          { emoji: "💛", green: true,  text: "Злиться — можно" },
-          { emoji: "🚫", green: false, text: "Обижать — нельзя" },
-          { emoji: "💬", green: true,  text: "Говорим словами, вежливо" },
-          { emoji: "🤝", green: true,  text: "Договариваемся, спрашиваем, предлагаем" },
-        ].map((r, i) => (
+function SlideRules() {
+  const [visible, setVisible] = useState<number[]>([]);
+  const [showEnd, setShowEnd] = useState(false);
+
+  useEffect(() => {
+    RULES.forEach((_, i) => {
+      setTimeout(() => setVisible((v) => [...v, i]), 900 + i * 1000);
+    });
+    setTimeout(() => setShowEnd(true), 900 + RULES.length * 1000 + 400);
+  }, []);
+
+  return (
+    <div
+      className="relative flex flex-col items-center text-center overflow-hidden rounded-2xl"
+      style={{
+        minHeight: 480,
+        background: "linear-gradient(180deg, #0D0D2B 0%, #1A1040 60%, #2C1654 100%)",
+      }}
+    >
+      {/* Звёздное небо */}
+      <Stars />
+
+      {/* Заголовок — кинотитр */}
+      <div className="relative z-10 mt-8 mb-2 flex flex-col items-center gap-1 animate-slide-up" style={{ animationDelay: "0.1s", opacity: 0 }}>
+        <span className="font-caveat text-[#F9A825] text-sm tracking-widest uppercase">— конец —</span>
+        <h2 className="font-nunito font-black text-3xl text-white drop-shadow-lg">
+          Правила Дружбы
+        </h2>
+        <div className="w-24 h-0.5 bg-[#F9A825] rounded-full mt-1 opacity-70" />
+      </div>
+
+      {/* Правила — появляются по очереди */}
+      <div className="relative z-10 flex flex-col gap-4 w-full px-5 mt-6">
+        {RULES.map((rule, i) => (
           <div
             key={i}
-            className={`flex items-center gap-4 rounded-2xl border-2 px-5 py-3 animate-slide-up ${
-              r.green
-                ? "bg-[#E8F5E9] border-[#A5D6A7]"
-                : "bg-[#FFEBEE] border-[#EF9A9A]"
-            }`}
-            style={{ animationDelay: `${0.3 + i * 0.1}s`, opacity: 0 }}
+            className="flex items-center gap-4 rounded-2xl px-5 py-4"
+            style={{
+              background: "rgba(255,255,255,0.07)",
+              border: "1.5px solid rgba(255,255,255,0.15)",
+              backdropFilter: "blur(4px)",
+              opacity: visible.includes(i) ? 1 : 0,
+              transform: visible.includes(i) ? "translateY(0)" : "translateY(24px)",
+              transition: "opacity 0.7s ease, transform 0.7s ease",
+            }}
           >
-            <span className="text-2xl">{r.emoji}</span>
-            <span className={`font-nunito font-bold text-lg ${r.green ? "text-[#2E7D32]" : "text-[#C62828]"}`}>
-              {r.text}
+            <span className="text-3xl flex-shrink-0">{rule.emoji}</span>
+            <span className="font-nunito font-extrabold text-lg text-white text-left leading-snug">
+              {rule.text}
             </span>
           </div>
         ))}
       </div>
 
+      {/* Финальная строка */}
       <div
-        className="w-full mt-2 rounded-3xl px-6 py-6 animate-bounce-in"
+        className="relative z-10 mt-8 flex flex-col items-center gap-2 pb-8"
         style={{
-          background: "linear-gradient(135deg, #FFF8E1 0%, #FFE0B2 100%)",
-          border: "3px solid #FFB74D",
-          animationDelay: "0.75s",
-          opacity: 0,
+          opacity: showEnd ? 1 : 0,
+          transform: showEnd ? "translateY(0)" : "translateY(16px)",
+          transition: "opacity 0.9s ease, transform 0.9s ease",
         }}
       >
-        <p className="font-caveat text-2xl font-bold text-[#E65100] leading-relaxed">
-          Вы сильнее своей злости,<br />
-          а друзья важнее, чем ссора и обида! 💪
-        </p>
-        <div className="mt-3 flex justify-center gap-2 text-2xl animate-pulse-soft">
-          <span>🌟</span><span>💛</span><span>🌟</span>
+        <div className="flex gap-2 text-2xl animate-pulse-soft">
+          <span>⭐</span><span>💛</span><span>⭐</span>
         </div>
+        <p className="font-caveat text-[#FFD54F] text-xl font-bold">
+          Будьте лучшими друзьями!
+        </p>
       </div>
+    </div>
+  );
+}
+
+function Stars() {
+  const positions = [
+    [12,8],[28,15],[55,5],[70,12],[85,7],[95,20],[8,30],[40,25],[65,22],[90,35],
+    [20,45],[50,40],[75,38],[15,60],[35,55],[60,52],[80,58],[25,72],[48,68],[72,65],
+    [92,50],[5,82],[30,78],[58,75],[82,80],[42,88],[65,90],[18,92],[76,95],[88,88],
+  ];
+  return (
+    <div className="absolute inset-0 pointer-events-none">
+      {positions.map(([x, y], i) => (
+        <div
+          key={i}
+          className="absolute rounded-full bg-white animate-pulse-soft"
+          style={{
+            left: `${x}%`,
+            top: `${y}%`,
+            width: i % 5 === 0 ? 3 : 2,
+            height: i % 5 === 0 ? 3 : 2,
+            opacity: 0.4 + (i % 4) * 0.15,
+            animationDelay: `${(i * 0.3) % 2}s`,
+          }}
+        />
+      ))}
     </div>
   );
 }
